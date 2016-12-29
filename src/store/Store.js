@@ -15,6 +15,13 @@ class Store {
       throw new Error('portName is required in options');
     }
 
+    chrome.runtime.onConnect.addListener(port => {
+      if (port === this.port) {
+        this.readyResolve();
+      }
+    });
+
+    this.readyPromise = new Promise(resolve => this.readyResolve = resolve);
     this.port = chrome.runtime.connect({name: portName});
     this.listeners = [];
     this.state = state;
@@ -24,6 +31,19 @@ class Store {
         this.replaceState(message.payload);
       }
     });
+  }
+
+  /**
+  * Returns a promise that resolves when the store is ready. Optionally a callback may be passed in instead.
+  * @param [function] callback An optional callback that may be passed in and will fire when the store is ready.
+  * @return {object} promise A promise that resolves when the store has established a connection with the background page.
+  */
+  ready(cb = null) {
+    if (cb !== null) {
+      return this.readyPromise.then(cb);
+    }
+
+    return this.readyPromise;
   }
 
   /**
